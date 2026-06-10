@@ -367,7 +367,7 @@
       if (ringIdx < 0 || !quad) return;
 
       // Extra padding for innermost ring to keep nodes away from the origin
-      const PAD    = ringIdx === 0 ? 18 : 12;
+      const PAD    = ringIdx === 0 ? 41 : 20;
       const innerR = ringIdx > 0 ? ringRadius(RINGS[ringIdx - 1].outerFrac) + PAD : PAD;
       const outerR = ringRadius(RINGS[ringIdx].outerFrac) - PAD;
       const bandH  = Math.max(outerR - innerR, 1);
@@ -375,7 +375,7 @@
       const span    = quad.endAngle - quad.startAngle; // always π/2
       const midR    = (innerR + outerR) / 2;
       // Keep nodes away from dividers; cap at 26% so tiny inner rings don't lose all their space
-      const angMargin = Math.min(Math.max(span * 0.15, (HIT_R * 2.2) / midR), span * 0.26);
+      const angMargin = Math.min(Math.max(span * 0.28, (HIT_R * 2.5) / midR), span * 0.35);
       const usable    = Math.max(span - 2 * angMargin, span * 0.35);
 
       techs.sort((a, b) => a.name.localeCompare(b.name));
@@ -402,7 +402,7 @@
                            Math.min(quad.endAngle   - angMargin * 0.4, angle));
           t._x = CX + r * Math.cos(angle);
           t._y = CY + r * Math.sin(angle);
-          t._r = 6;
+          t._r = 8;
         });
       });
     });
@@ -525,10 +525,10 @@
   // ── Impact axis labels (along the horizontal equator) ───────────────────────
   function drawImpactAxis() {
     ctx.save();
-    ctx.font         = 'bold 10px Arial, sans-serif';
+    ctx.font         = 'bold 14px Arial, sans-serif';
     ctx.fillStyle    = C.axisText;
     ctx.textBaseline = 'top';
-    const yLabel = CY + 5;
+    const yLabel = CY + 1;
 
     // Centre: Transformational
     const r0 = ringRadius(RINGS[0].outerFrac);
