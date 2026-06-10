@@ -1,0 +1,684 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Defra DDTS — Emerging Technology Radar 2026</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --purple:      #4B2E83;
+      --purple-light:#7B5EA7;
+      --purple-pale: #EDE8F5;
+      --green:       #00703C;
+      --adopt:       #00703C;
+      --explore:     #1D7B8A;
+      --watch:       #B58A00;
+      --bg:          #F8F8F8;
+      --surface:     #FFFFFF;
+      --border:      #D9D9D9;
+      --text:        #1A1A1A;
+      --text-muted:  #595959;
+    }
+
+    html, body { height: 100%; font-family: "GDS Transport", Arial, sans-serif;
+      background: var(--bg); color: var(--text); font-size: 15px; line-height: 1.5; }
+
+    /* ── Header ─────────────────────────────────────── */
+    header { background: var(--purple); color: #fff; padding: 14px 24px;
+      display: flex; align-items: center; gap: 16px;
+      box-shadow: 0 2px 6px rgba(0,0,0,.25); flex-wrap: wrap; }
+    .header-logo { width: 36px; height: 36px; background: #fff; border-radius: 4px;
+      display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+    .header-logo svg { width: 24px; height: 24px; }
+    .header-title { flex: 1; min-width: 200px; }
+    .header-title h1 { font-size: 1.1rem; font-weight: 700; letter-spacing: 0.01em; }
+    .header-title p { font-size: 0.78rem; opacity: 0.82; margin-top: 1px; }
+
+    /* ── Filter bar ──────────────────────────────────── */
+    .filter-bar { background: var(--surface); border-bottom: 2px solid var(--purple);
+      padding: 10px 24px; display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+    .filter-bar label { font-size: 0.78rem; font-weight: 700; color: var(--text-muted);
+      text-transform: uppercase; letter-spacing: 0.06em; white-space: nowrap; }
+    .filter-group { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+    .filter-btn { padding: 4px 12px; border-radius: 20px; border: 1.5px solid var(--border);
+      background: var(--surface); font-size: 0.78rem; cursor: pointer;
+      transition: background .15s, border-color .15s, color .15s;
+      white-space: nowrap; color: var(--text-muted); font-weight: 500; }
+    .filter-btn:hover { border-color: var(--purple-light); color: var(--purple); }
+    .filter-btn.active { background: var(--purple); border-color: var(--purple); color: #fff; }
+    .filter-btn.active-adopt   { background: var(--adopt);   border-color: var(--adopt);   color: #fff; }
+    .filter-btn.active-explore { background: var(--explore); border-color: var(--explore); color: #fff; }
+    .filter-btn.active-watch   { background: var(--watch);   border-color: var(--watch);   color: #fff; }
+    .filter-divider { width: 1px; height: 24px; background: var(--border); margin: 0 4px; }
+
+    /* ── Layout ──────────────────────────────────────── */
+    .main { display: flex; height: calc(100vh - 112px); overflow: hidden; }
+    .radar-wrap { flex: 1; min-width: 0; display: flex; flex-direction: column;
+      align-items: center; justify-content: center; padding: 16px; overflow: hidden; }
+    #radar-canvas { display: block; max-width: 100%; max-height: 100%; cursor: default; }
+
+    /* ── Legend ──────────────────────────────────────── */
+    .legend { display: flex; gap: 16px; flex-wrap: wrap; justify-content: center; margin-top: 8px; }
+    .legend-item { display: flex; align-items: center; gap: 6px;
+      font-size: 0.75rem; color: var(--text-muted); }
+    .legend-dot { width: 11px; height: 11px; border-radius: 50%; flex-shrink: 0; }
+
+    /* ── Side panel ──────────────────────────────────── */
+    .side-panel { width: 340px; flex-shrink: 0; background: var(--surface);
+      border-left: 2px solid var(--purple); display: flex; flex-direction: column;
+      overflow: hidden; transform: translateX(100%); transition: transform .25s ease; }
+    .side-panel.open { transform: translateX(0); }
+    .panel-header { background: var(--purple); color: #fff; padding: 16px 20px;
+      display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; }
+    .panel-header h2 { font-size: 1rem; font-weight: 700; line-height: 1.35; }
+    .panel-close { background: none; border: none; color: #fff; cursor: pointer;
+      font-size: 1.3rem; padding: 2px 4px; border-radius: 3px; flex-shrink: 0;
+      opacity: .8; line-height: 1; }
+    .panel-close:hover { opacity: 1; background: rgba(255,255,255,.15); }
+    .panel-body { padding: 20px; overflow-y: auto; flex: 1; }
+    .badge { display: inline-block; padding: 3px 10px; border-radius: 12px;
+      font-size: 0.72rem; font-weight: 700; letter-spacing: .05em;
+      text-transform: uppercase; color: #fff; margin-bottom: 4px; }
+    .badge-adopt   { background: var(--adopt);   }
+    .badge-explore { background: var(--explore); }
+    .badge-watch   { background: var(--watch);   color: #1a1a1a; }
+    .badge-impact  { background: var(--purple-pale); color: var(--purple); }
+    .badge-new     { background: var(--purple); }
+    .panel-section { margin-bottom: 16px; }
+    .panel-section h3 { font-size: 0.72rem; font-weight: 700; text-transform: uppercase;
+      letter-spacing: .07em; color: var(--text-muted); margin-bottom: 6px; }
+    .panel-section p { font-size: 0.88rem; color: var(--text); line-height: 1.6; }
+    .panel-empty { display: flex; flex-direction: column; align-items: center;
+      justify-content: center; height: 100%; color: var(--text-muted);
+      text-align: center; padding: 32px; gap: 12px; }
+    .panel-empty svg { opacity: .25; }
+    .panel-empty p { font-size: 0.88rem; }
+
+    /* ── Tooltip ─────────────────────────────────────── */
+    #tooltip { position: fixed; background: var(--text); color: #fff;
+      padding: 6px 10px; border-radius: 5px; font-size: .78rem;
+      pointer-events: none; opacity: 0; transition: opacity .12s;
+      z-index: 9999; max-width: 220px; line-height: 1.4; white-space: nowrap; }
+    #tooltip.visible { opacity: 1; }
+
+    @media (max-width: 700px) {
+      .main { flex-direction: column; height: auto; overflow: auto; }
+      .radar-wrap { padding: 12px; }
+      .side-panel { width: 100%; border-left: none; border-top: 2px solid var(--purple);
+        transform: translateY(100%); }
+      .side-panel.open { transform: translateY(0); }
+    }
+  </style>
+</head>
+<body>
+
+<header>
+  <div class="header-logo" aria-hidden="true">
+    <svg viewBox="0 0 24 24" fill="none">
+      <path d="M12 2C9 2 7 5 7 7c0 1 .5 2 1 2.5C6.5 10 5 11.5 5 13c0 2 1.5 3.5 3 4l-1 3h10l-1-3c1.5-.5 3-2 3-4 0-1.5-1.5-3-3-3.5.5-.5 1-1.5 1-2.5 0-2-2-5-5-5z" fill="#4B2E83"/>
+    </svg>
+  </div>
+  <div class="header-title">
+    <h1>Emerging Technology Radar 2026</h1>
+    <p>Defra DDTS — Digital, Data, Technology &amp; Security</p>
+  </div>
+</header>
+
+<div class="filter-bar" role="toolbar" aria-label="Filters">
+  <label>Theme</label>
+  <div class="filter-group">
+    <button class="filter-btn active" data-filter="theme" data-value="all">All</button>
+    <button class="filter-btn" data-filter="theme" data-value="Digital Transformation">Digital Transformation</button>
+    <button class="filter-btn" data-filter="theme" data-value="Environmental Intelligence">Environmental</button>
+    <button class="filter-btn" data-filter="theme" data-value="Sustainable Operations">Sustainable Ops</button>
+    <button class="filter-btn" data-filter="theme" data-value="Cybersecurity">Cybersecurity</button>
+  </div>
+  <div class="filter-divider"></div>
+  <label>Status</label>
+  <div class="filter-group">
+    <button class="filter-btn active" data-filter="status" data-value="all">All</button>
+    <button class="filter-btn" data-filter="status" data-value="Adopt">Adopt</button>
+    <button class="filter-btn" data-filter="status" data-value="Explore">Explore</button>
+    <button class="filter-btn" data-filter="status" data-value="Watch">Watch</button>
+  </div>
+  <div class="filter-divider"></div>
+  <div class="filter-group">
+    <button class="filter-btn" data-filter="new" data-value="toggle">&#9733; New in 2026</button>
+  </div>
+</div>
+
+<div class="main">
+  <div class="radar-wrap">
+    <canvas id="radar-canvas" width="760" height="760" role="img" aria-label="Technology radar"></canvas>
+    <div class="legend">
+      <div class="legend-item"><div class="legend-dot" style="background:var(--adopt)"></div>Adopt</div>
+      <div class="legend-item"><div class="legend-dot" style="background:var(--explore)"></div>Explore</div>
+      <div class="legend-item"><div class="legend-dot" style="background:var(--watch)"></div>Watch</div>
+      <div class="legend-item">
+        <svg width="13" height="13" viewBox="0 0 13 13" style="flex-shrink:0">
+          <polygon points="6.5,0.5 7.9,4.5 12.2,4.5 8.8,7.2 10.1,11.2 6.5,8.6 2.9,11.2 4.2,7.2 0.8,4.5 5.1,4.5" fill="#4B2E83"/>
+        </svg>
+        New in 2026
+      </div>
+      <div class="legend-item"><div class="legend-dot" style="background:rgba(0,0,0,0.14)"></div>Filtered out</div>
+    </div>
+  </div>
+
+  <aside class="side-panel" id="side-panel" aria-label="Technology details" aria-live="polite">
+    <div class="panel-header">
+      <h2 id="panel-title">Technology Details</h2>
+      <button class="panel-close" id="panel-close" aria-label="Close">✕</button>
+    </div>
+    <div class="panel-body" id="panel-body">
+      <div class="panel-empty">
+        <svg width="48" height="48" viewBox="0 0 48 48" fill="none">
+          <circle cx="24" cy="24" r="20" stroke="#4B2E83" stroke-width="2"/>
+          <circle cx="24" cy="24" r="13" stroke="#4B2E83" stroke-width="2"/>
+          <circle cx="24" cy="24" r="6"  stroke="#4B2E83" stroke-width="2"/>
+          <line x1="24" y1="4" x2="24" y2="44" stroke="#4B2E83" stroke-width="1" stroke-dasharray="3 3"/>
+          <line x1="4"  y1="24" x2="44" y2="24" stroke="#4B2E83" stroke-width="1" stroke-dasharray="3 3"/>
+        </svg>
+        <p>Click a technology node on the radar to view details.</p>
+      </div>
+    </div>
+  </aside>
+</div>
+
+<div id="tooltip" role="tooltip"></div>
+
+<script>
+(function () {
+  'use strict';
+
+  // ── Technology data ─────────────────────────────────────────────────────────
+  // ring     = maturity level  → determines QUADRANT (angular position)
+  // impact   = business impact → determines RING (radial distance from centre)
+  // quadrant = strategic theme → shown in panel & used for theme filter
+  const TECHNOLOGIES = [
+    // ── Mainstream ─────────────────────────────────────────────────────────
+    { name: "Artificial Intelligence",              ring: "Mainstream", impact: "Transformational", quadrant: "Digital Transformation",    status: "Adopt",   isNew: false,
+      description: "Now a mainstream capability across Defra group. Powers intelligent decision-making, automation and analytics across all business areas and digital services." },
+    { name: "IoT",                                  ring: "Mainstream", impact: "Transformational", quadrant: "Environmental Intelligence", status: "Adopt",   isNew: false,
+      description: "Networks of sensors capturing telemetry on rivers, coasts, habitats and infrastructure. Enables real-time environmental monitoring at scale across Defra's estate." },
+    { name: "Intelligent Applications",             ring: "Mainstream", impact: "Transformational", quadrant: "Digital Transformation",    status: "Adopt",   isNew: false,
+      description: "Applications embedding AI capabilities directly into workflows and services. Deliver smarter, more responsive digital experiences across Defra's citizen and staff-facing systems." },
+    { name: "Intelligent Process Automation (IPA)", ring: "Mainstream", impact: "Transformational", quadrant: "Digital Transformation",    status: "Adopt",   isNew: true,
+      description: "Combines Robotic Process Automation with AI so processes understand, decide and adapt. Reduces manual effort across licensing, inspections and case handling workflows." },
+    { name: "Advanced Analytics",                   ring: "Mainstream", impact: "High",             quadrant: "Digital Transformation",    status: "Adopt",   isNew: false,
+      description: "Autonomous or semi-autonomous examination of data using techniques beyond traditional BI. Enables deeper insights, predictions and recommendations to drive evidence-based policy." },
+    { name: "Knowledge Graphs",                     ring: "Mainstream", impact: "High",             quadrant: "Digital Transformation",    status: "Adopt",   isNew: true,
+      description: "Graph-based representations and semantic layers that unify data and vocabularies across domains. Supports cross-ALB data integration and richer evidence-based policymaking." },
+    { name: "Synthetic Data",                       ring: "Mainstream", impact: "High",             quadrant: "Digital Transformation",    status: "Adopt",   isNew: false,
+      description: "Generated by applying sampling techniques to real-world data or simulation scenarios. Enables safe testing and model development without exposing sensitive citizen or environmental data." },
+    { name: "Sovereign AI",                         ring: "Mainstream", impact: "High",             quadrant: "Digital Transformation",    status: "Adopt",   isNew: true,
+      description: "Governance and platforms ensuring domestic ownership and control of sensitive data and AI. Aligns with government ambitions for national AI capability, security and public confidence." },
+    { name: "Sustainable Cloud",                    ring: "Mainstream", impact: "High",             quadrant: "Sustainable Operations",    status: "Adopt",   isNew: true,
+      description: "Use of renewable-powered, low-carbon cloud services. Central to Defra's net zero commitment and its role leading government-wide sustainable digital operations." },
+    { name: "Sovereign Cloud",                      ring: "Mainstream", impact: "High",             quadrant: "Cybersecurity",             status: "Adopt",   isNew: true,
+      description: "Cloud infrastructure under national control with strong data sovereignty protections. Supports secure, compliant hosting of critical government data and citizen-facing services." },
+
+    // ── Developing ──────────────────────────────────────────────────────────
+    { name: "AI-Enabled Agents",                    ring: "Developing", impact: "Transformational", quadrant: "Digital Transformation",    status: "Explore", isNew: true,
+      description: "Autonomous systems capable of planning, reasoning and executing multi-step tasks end-to-end. Could modernise Defra services by automating licensing, regulatory triage and incident response." },
+    { name: "Autonomous Vehicles",                  ring: "Developing", impact: "Transformational", quadrant: "Environmental Intelligence", status: "Explore", isNew: false,
+      description: "AI-equipped vehicles collecting high-resolution environmental intelligence across remote or hazardous landscapes. Support flood assessment, coastal monitoring, wildfire surveillance and biosecurity." },
+    { name: "Green Software Engineering",           ring: "Developing", impact: "Transformational", quadrant: "Sustainable Operations",    status: "Adopt",   isNew: true,
+      description: "Discipline of building carbon-efficient, carbon-aware software by optimising code and reducing unnecessary data movement. Improves sustainability of Defra's core applications." },
+    { name: "Digital Twins",                        ring: "Developing", impact: "High",             quadrant: "Environmental Intelligence", status: "Explore", isNew: false,
+      description: "Digital representations of ecosystems, catchments and climate-linked systems. Support scenario-based forecasting, early-warning insights and proactive environmental risk management." },
+    { name: "Geospatial AI",                        ring: "Developing", impact: "High",             quadrant: "Environmental Intelligence", status: "Explore", isNew: true,
+      description: "Uses machine learning to analyse satellite, drone and Earth Observation data. Enables automated assessment of environmental change, flood forecasting and pollution detection." },
+    { name: "Homomorphic Encryption",               ring: "Developing", impact: "High",             quadrant: "Cybersecurity",             status: "Explore", isNew: true,
+      description: "Allows computations to be performed on data while it remains encrypted. Reduces risk of data exposure during analytics and supports secure cloud adoption across Defra services." },
+    { name: "Threat Exposure Management",           ring: "Developing", impact: "High",             quadrant: "Cybersecurity",             status: "Explore", isNew: true,
+      description: "Continually assesses the visibility, accessibility and exploitability of Defra's digital assets. Governs a continuous threat exposure management programme to strengthen cyber posture." },
+    { name: "Energy-Efficient Compute",             ring: "Developing", impact: "High",             quadrant: "Sustainable Operations",    status: "Explore", isNew: true,
+      description: "Hardware and architectures that reduce energy consumption of digital workloads including AI and analytics. Significantly reduces the environmental and financial cost of running Defra services." },
+    { name: "Post-Quantum Cryptography",            ring: "Developing", impact: "High",             quadrant: "Cybersecurity",             status: "Explore", isNew: true,
+      description: "Encryption methods resistant to future quantum computing attacks. Essential to protect long-lived environmental datasets and regulatory records that must remain secure for decades." },
+    { name: "Neuro-symbolic AI",                    ring: "Developing", impact: "High",             quadrant: "Digital Transformation",    status: "Explore", isNew: true,
+      description: "Combines statistical learning with rules-based reasoning for transparent, auditable, policy-aligned decisions. Strengthens fairness and accountability across inspections, permitting and enforcement." },
+    { name: "Edge AI",                              ring: "Developing", impact: "High",             quadrant: "Environmental Intelligence", status: "Explore", isNew: false,
+      description: "Processes environmental data at the point of sensing for immediate anomaly detection. Provides faster alerting for pollution spikes, harmful algal blooms, invasive species and animal health threats." },
+    { name: "Circular IT Asset Management",         ring: "Developing", impact: "High",             quadrant: "Sustainable Operations",    status: "Adopt",   isNew: true,
+      description: "Extends device lifecycles through repair, reuse and refurbishment to reduce e-waste and lower procurement costs. Defra is already actively adopting circular IT approaches." },
+    { name: "Quantum Sensors",                      ring: "Developing", impact: "High",             quadrant: "Environmental Intelligence", status: "Explore", isNew: false,
+      description: "Use quantum properties to measure environmental conditions with exceptional precision. Could detect subtle changes in water quality, soil properties and air pollutants earlier than traditional methods." },
+    { name: "Bidirectional Brain-Machine Interface",ring: "Developing", impact: "Moderate",         quadrant: "Digital Transformation",    status: "Watch",   isNew: false,
+      description: "Direct computer-brain interface that interprets voluntary brain patterns as commands. Long-term research technology with potential future implications for human-computer interaction." },
+
+    // ── Emerging ────────────────────────────────────────────────────────────
+    { name: "Causal AI",                            ring: "Emerging",   impact: "High",             quadrant: "Digital Transformation",    status: "Watch",   isNew: true,
+      description: "Identifies cause-and-effect relationships to enable AI that prescribes actions more effectively. Improves policy decision-making by understanding root causes rather than correlations alone." },
+    { name: "Sustainable AI",                       ring: "Emerging",   impact: "High",             quadrant: "Sustainable Operations",    status: "Watch",   isNew: true,
+      description: "Practice of designing, training and deploying AI systems to minimise environmental impact. Ensures Defra's growing AI use aligns with its net zero and sustainability commitments." },
+    { name: "Digital Coaching Applications",        ring: "Emerging",   impact: "High",             quadrant: "Digital Transformation",    status: "Explore", isNew: true,
+      description: "AI-enabled tools supporting colleagues' personal and professional development at scale. Provides personalised coaching experiences to build capability alongside rapid technology change." },
+    { name: "Ambient Intelligence",                 ring: "Emerging",   impact: "High",             quadrant: "Environmental Intelligence", status: "Adopt",  isNew: true,
+      description: "Ultra-low-cost smart tags and sensors delivering large-scale affordable tracking of objects and environments. Gives Defra new visibility across business processes, habitats and critical infrastructure." },
+    { name: "Spatial Computing",                    ring: "Emerging",   impact: "High",             quadrant: "Digital Transformation",    status: "Explore", isNew: true,
+      description: "Immersive 3D and VR/AR modelling of geospatial data for planning and stakeholder communication. Enables powerful visualisation of environmental change and scenario planning." },
+    { name: "Secure Multiparty Computation",        ring: "Emerging",   impact: "Moderate",         quadrant: "Cybersecurity",             status: "Explore", isNew: true,
+      description: "Allows multiple organisations to jointly analyse sensitive data without sharing the raw information. Enables secure cross-government collaboration for environmental modelling and biosecurity analysis." },
+    { name: "Neuromorphic Computing",               ring: "Emerging",   impact: "Moderate",         quadrant: "Digital Transformation",    status: "Explore", isNew: true,
+      description: "Models biological brain operation using spiking neural networks and non-von Neumann architectures. Offers future gains in energy efficiency and processing speed for AI inference at scale." },
+    { name: "Photonic Computing",                   ring: "Emerging",   impact: "Moderate",         quadrant: "Sustainable Operations",    status: "Watch",   isNew: true,
+      description: "Uses photons instead of electrons for information processing. Could support greener compute for environmental modelling and faster processing of geospatial and sensor data." },
+
+    // ── Embryonic ───────────────────────────────────────────────────────────
+    { name: "Quantum Computing",                    ring: "Embryonic",  impact: "High",             quadrant: "Digital Transformation",    status: "Watch",   isNew: false,
+      description: "Non-classical computing using quantum states of subatomic particles for vast combinatorial problems. Future potential for hyper-accurate climate and hydrological modelling beyond classical limits." },
+    { name: "Artificial General Intelligence",      ring: "Embryonic",  impact: "High",             quadrant: "Digital Transformation",    status: "Watch",   isNew: false,
+      description: "Hypothetical AI capable of any intellectual task a human can perform — still theoretical. Important to monitor for long-term organisational, societal and public policy implications." },
+    { name: "Quantum AI",                           ring: "Embryonic",  impact: "Moderate",         quadrant: "Digital Transformation",    status: "Watch",   isNew: true,
+      description: "Emerging field at the intersection of quantum technologies and AI algorithms. Aims to exploit quantum mechanics to develop more powerful AI that delivers better-than-classical performance." },
+  ];
+
+  // ── DOM ─────────────────────────────────────────────────────────────────────
+  const canvas     = document.getElementById('radar-canvas');
+  const ctx        = canvas.getContext('2d');
+  const tooltip    = document.getElementById('tooltip');
+  const panel      = document.getElementById('side-panel');
+  const panelTitle = document.getElementById('panel-title');
+  const panelBody  = document.getElementById('panel-body');
+  const panelClose = document.getElementById('panel-close');
+
+  // ── Constants ───────────────────────────────────────────────────────────────
+  const W     = canvas.width;   // 760
+  const H     = canvas.height;  // 760
+  const CX    = W / 2;
+  const CY    = H / 2;
+  const MAX_R = 300;             // radius of outermost ring
+  const HIT_R = 11;
+
+  const C = {
+    adopt:    '#00703C',
+    explore:  '#1D7B8A',
+    watch:    '#B58A00',
+    purple:   '#4B2E83',
+    darkGreen:'#1B5E20',
+    axisText: 'rgba(75,46,131,0.60)',
+  };
+
+  // Impact rings — innermost = Transformational, outermost = Moderate
+  const RINGS = [
+    { label: 'Transformational', outerFrac: 0.40, fill: 'rgba(0,112,60,0.30)'  }, // darkest green – larger so inner nodes don't crowd
+    { label: 'High',             outerFrac: 0.72, fill: 'rgba(0,112,60,0.16)'  }, // medium green
+    { label: 'Moderate',         outerFrac: 1.00, fill: 'rgba(0,112,60,0.07)'  }, // lightest green
+  ];
+
+  // Maturity quadrants — top-left = Embryonic, clockwise → Emerging, Developing, Mainstream
+  const QUADRANTS = [
+    { label: 'Embryonic',  startAngle: -Math.PI,     endAngle: -Math.PI / 2 }, // top-left
+    { label: 'Emerging',   startAngle: -Math.PI / 2, endAngle:  0           }, // top-right
+    { label: 'Developing', startAngle:  0,           endAngle:  Math.PI / 2 }, // bottom-right
+    { label: 'Mainstream', startAngle:  Math.PI / 2, endAngle:  Math.PI     }, // bottom-left
+  ];
+
+  const THEME_FULL = {
+    'Digital Transformation':    'Digital Transformation & Data-Driven Services',
+    'Environmental Intelligence':'Environmental Intelligence & Resilience',
+    'Sustainable Operations':    'Sustainable Digital Operations & Leadership',
+    'Cybersecurity':             'Cybersecurity & Operational Resilience',
+  };
+
+  const MATURITY_DESC = {
+    Mainstream: 'Proven, widely deployed, supported by robust vendor ecosystems and best practices.',
+    Developing: 'Gaining momentum with growing commercial availability and adoption beyond early adopters.',
+    Emerging:   'First-generation stage — high-cost, highly customised, limited to early pilot adopters.',
+    Embryonic:  'Still in laboratory or research stages, typically not yet commercially viable.',
+  };
+
+  const STATUS_DESC = {
+    Adopt:   'Begin or continue implementing across relevant business areas to drive value immediately.',
+    Explore: 'Run targeted proof-of-concept to validate benefits, risks and scalability in a Defra context.',
+    Watch:   'Monitor maturity and market adoption; reassess periodically for pilot opportunities.',
+  };
+
+  // ── Filters ─────────────────────────────────────────────────────────────────
+  const filters = { theme: 'all', status: 'all', isNew: false };
+
+  function isVisible(t) {
+    if (filters.theme  !== 'all' && t.quadrant !== filters.theme)  return false;
+    if (filters.status !== 'all' && t.status   !== filters.status) return false;
+    if (filters.isNew  && !t.isNew) return false;
+    return true;
+  }
+
+  // ── Geometry ─────────────────────────────────────────────────────────────────
+  function ringRadius(frac) { return MAX_R * frac; }
+
+  // ── Position assignment ──────────────────────────────────────────────────────
+  // Each cell = impact level (ring) × maturity (quadrant)
+  function assignNodePositions() {
+    const cells = {};
+    TECHNOLOGIES.forEach(t => {
+      const k = t.impact + '|||' + t.ring;
+      (cells[k] = cells[k] || []).push(t);
+    });
+
+    Object.keys(cells).forEach(k => {
+      const techs   = cells[k];
+      const parts   = k.split('|||');
+      const ringIdx = RINGS.findIndex(r => r.label === parts[0]);     // impact → ring
+      const quad    = QUADRANTS.find(q => q.label  === parts[1]);     // maturity → quadrant
+      if (ringIdx < 0 || !quad) return;
+
+      // Extra padding for innermost ring to keep nodes away from the origin
+      const PAD    = ringIdx === 0 ? 18 : 12;
+      const innerR = ringIdx > 0 ? ringRadius(RINGS[ringIdx - 1].outerFrac) + PAD : PAD;
+      const outerR = ringRadius(RINGS[ringIdx].outerFrac) - PAD;
+      const bandH  = Math.max(outerR - innerR, 1);
+
+      const span    = quad.endAngle - quad.startAngle; // always π/2
+      const midR    = (innerR + outerR) / 2;
+      // Keep nodes away from dividers; cap at 26% so tiny inner rings don't lose all their space
+      const angMargin = Math.min(Math.max(span * 0.15, (HIT_R * 2.2) / midR), span * 0.26);
+      const usable    = Math.max(span - 2 * angMargin, span * 0.35);
+
+      techs.sort((a, b) => a.name.localeCompare(b.name));
+      const n = techs.length;
+
+      const numRows = n <= 2 ? 1 : n <= 5 ? 2 : 3;
+      const rFracs  = numRows === 1 ? [0.50]
+                    : numRows === 2 ? [0.28, 0.72]
+                    :                 [0.18, 0.50, 0.82];
+      const rows    = Array.from({ length: numRows }, () => []);
+      techs.forEach((t, i) => rows[i % numRows].push(t));
+
+      rows.forEach((rowTechs, ri) => {
+        const r        = innerR + bandH * rFracs[ri];
+        const m        = rowTechs.length;
+        const halfStep = usable / Math.max(m * 2, 2);
+        const angOff   = ri % 2 === 1 ? halfStep * 0.5 : 0;
+
+        rowTechs.forEach((t, ci) => {
+          let angle = m === 1
+            ? quad.startAngle + span / 2 + angOff
+            : quad.startAngle + angMargin + angOff + usable * (ci / (m - 1));
+          angle = Math.max(quad.startAngle + angMargin * 0.4,
+                           Math.min(quad.endAngle   - angMargin * 0.4, angle));
+          t._x = CX + r * Math.cos(angle);
+          t._y = CY + r * Math.sin(angle);
+          t._r = 6;
+        });
+      });
+    });
+  }
+
+  // ── Node drawing ─────────────────────────────────────────────────────────────
+  function drawCircleNode(x, y, r, color, alpha) {
+    ctx.save();
+    ctx.globalAlpha = alpha;
+    ctx.beginPath();
+    ctx.arc(x, y, r, 0, Math.PI * 2);
+    ctx.fillStyle   = color;
+    ctx.fill();
+    ctx.strokeStyle = 'rgba(255,255,255,0.9)';
+    ctx.lineWidth   = 1.5;
+    ctx.stroke();
+    ctx.restore();
+  }
+
+  function drawStarNode(x, y, outerR, color, alpha) {
+    const innerR = outerR * 0.42;
+    ctx.save();
+    ctx.globalAlpha = alpha;
+    ctx.beginPath();
+    for (let i = 0; i < 10; i++) {
+      const r2    = i % 2 === 0 ? outerR : innerR;
+      const angle = (Math.PI / 5) * i - Math.PI / 2;
+      i === 0 ? ctx.moveTo(x + r2 * Math.cos(angle), y + r2 * Math.sin(angle))
+              : ctx.lineTo(x + r2 * Math.cos(angle), y + r2 * Math.sin(angle));
+    }
+    ctx.closePath();
+    ctx.fillStyle   = color;
+    ctx.fill();
+    ctx.strokeStyle = 'rgba(255,255,255,0.9)';
+    ctx.lineWidth   = 1;
+    ctx.stroke();
+    ctx.restore();
+  }
+
+  // ── Curved arc text ──────────────────────────────────────────────────────────
+  // Top arcs (midAngle < 0): clockwise traversal, rotation = +π/2 → readable L→R
+  // Bottom arcs (midAngle > 0): counter-clockwise traversal, rotation = −π/2
+  //   First char lands on screen-LEFT, last char on screen-RIGHT → reads naturally L→R
+  function drawArcLabel(text, arcRadius, midAngle, fontSize, color) {
+    ctx.save();
+    ctx.font         = `bold italic ${fontSize}px Arial, sans-serif`;
+    ctx.fillStyle    = color;
+    ctx.textAlign    = 'center';
+    ctx.textBaseline = 'middle';
+
+    const isBottom = midAngle > 0 && midAngle < Math.PI;
+    const dir      = isBottom ? -1 : 1;        // -1 = counter-clockwise for bottom arcs
+    const chars    = text.split('');
+    const widths   = chars.map(c => ctx.measureText(c).width + 0.6);
+    const totalW   = widths.reduce((a, b) => a + b, 0);
+    const totalAng = totalW / arcRadius;
+
+    // For CW (top): start at mid − half, advance forward
+    // For CCW (bottom): start at mid + half, advance backward
+    let angle = midAngle - dir * totalAng / 2;
+
+    chars.forEach((ch, i) => {
+      const cAng    = widths[i] / arcRadius;
+      const drawAng = angle + dir * cAng / 2;
+      const x       = CX + arcRadius * Math.cos(drawAng);
+      const y       = CY + arcRadius * Math.sin(drawAng);
+      ctx.save();
+      ctx.translate(x, y);
+      ctx.rotate(drawAng + (isBottom ? -Math.PI / 2 : Math.PI / 2));
+      ctx.fillText(ch, 0, 0);
+      ctx.restore();
+      angle += dir * cAng;
+    });
+    ctx.restore();
+  }
+
+  // ── Background ───────────────────────────────────────────────────────────────
+  function drawBackground() {
+    ctx.clearRect(0, 0, W, H);
+
+    // Impact ring bands (outer → inner so inner colour shows on top)
+    for (let i = RINGS.length - 1; i >= 0; i--) {
+      const outer = ringRadius(RINGS[i].outerFrac);
+      const inner = i > 0 ? ringRadius(RINGS[i - 1].outerFrac) : 0;
+      ctx.beginPath();
+      ctx.arc(CX, CY, outer, 0, Math.PI * 2);
+      if (inner > 0) ctx.arc(CX, CY, inner, 0, Math.PI * 2, true);
+      ctx.fillStyle = RINGS[i].fill;
+      ctx.fill();
+    }
+
+    // Ring border circles
+    RINGS.forEach(r => {
+      ctx.beginPath();
+      ctx.arc(CX, CY, ringRadius(r.outerFrac), 0, Math.PI * 2);
+      ctx.strokeStyle = 'rgba(0,70,35,0.35)';
+      ctx.lineWidth   = 1;
+      ctx.stroke();
+    });
+
+    // Quadrant dividers (vertical + horizontal)
+    [0, Math.PI / 2, Math.PI, 3 * Math.PI / 2].forEach(a => {
+      ctx.beginPath();
+      ctx.moveTo(CX, CY);
+      ctx.lineTo(CX + MAX_R * Math.cos(a), CY + MAX_R * Math.sin(a));
+      ctx.strokeStyle = 'rgba(75,46,131,0.20)';
+      ctx.lineWidth   = 1.5;
+      ctx.setLineDash([6, 4]);
+      ctx.stroke();
+      ctx.setLineDash([]);
+    });
+
+    // Centre dot
+    ctx.beginPath();
+    ctx.arc(CX, CY, 4, 0, Math.PI * 2);
+    ctx.fillStyle = C.purple;
+    ctx.fill();
+  }
+
+  // ── Impact axis labels (along the horizontal equator) ───────────────────────
+  function drawImpactAxis() {
+    ctx.save();
+    ctx.font         = 'bold 10px Arial, sans-serif';
+    ctx.fillStyle    = C.axisText;
+    ctx.textBaseline = 'top';
+    const yLabel = CY + 5;
+
+    // Centre: Transformational
+    const r0 = ringRadius(RINGS[0].outerFrac);
+    ctx.textAlign = 'center';
+    ctx.fillText('Transformational', CX, yLabel);
+
+    // High — midpoint of High band, both sides
+    const r1 = ringRadius(RINGS[1].outerFrac);
+    const midHigh = (r0 + r1) / 2;
+    ctx.textAlign = 'center';
+    ctx.fillText('High', CX - midHigh, yLabel);
+    ctx.fillText('High', CX + midHigh, yLabel);
+
+    // Moderate — midpoint of Moderate band, both sides
+    const midMod = (r1 + MAX_R) / 2;
+    ctx.fillText('Moderate', CX - midMod, yLabel);
+    ctx.fillText('Moderate', CX + midMod, yLabel);
+    ctx.restore();
+  }
+
+  // ── Maturity arc labels around the outside ───────────────────────────────────
+  function drawMaturityLabels() {
+    const arcR = MAX_R + 30;
+    const midAngles = [-3*Math.PI/4, -Math.PI/4, Math.PI/4, 3*Math.PI/4];
+    QUADRANTS.forEach((q, i) => {
+      drawArcLabel(q.label, arcR, midAngles[i], 15, C.darkGreen);
+    });
+  }
+
+  // ── Nodes ────────────────────────────────────────────────────────────────────
+  function drawNodes() {
+    TECHNOLOGIES.forEach(t => {
+      if (t._x === undefined) return;
+      const alpha = isVisible(t) ? 0.92 : 0.12;
+      const color = C[t.status.toLowerCase()];
+      t.isNew
+        ? drawStarNode(t._x, t._y, t._r + 2.5, color, alpha)
+        : drawCircleNode(t._x, t._y, t._r, color, alpha);
+    });
+  }
+
+  function draw() {
+    drawBackground();
+    drawImpactAxis();
+    drawMaturityLabels();
+    drawNodes();
+  }
+
+  // ── Panel ─────────────────────────────────────────────────────────────────────
+  function openPanel(tech) {
+    panelTitle.textContent = tech.name;
+    const sc = tech.status.toLowerCase();
+    const newBadge = tech.isNew
+      ? `<span class="badge badge-new" style="margin-left:6px">&#9733;&nbsp;New 2026</span>` : '';
+    panelBody.innerHTML = `
+      <div style="margin-bottom:14px">
+        <span class="badge badge-${sc}">${tech.status}</span>
+        <span class="badge badge-impact">${tech.ring}</span>
+        <span class="badge badge-impact" style="margin-left:4px">${tech.impact} Impact</span>
+        ${newBadge}
+      </div>
+      <div class="panel-section">
+        <h3>Strategic Theme</h3>
+        <p>${THEME_FULL[tech.quadrant] || tech.quadrant}</p>
+      </div>
+      <div class="panel-section">
+        <h3>Why it matters to Defra</h3>
+        <p>${tech.description}</p>
+      </div>
+      <div class="panel-section">
+        <h3>Maturity Level</h3>
+        <p>${MATURITY_DESC[tech.ring] || ''}</p>
+      </div>
+      <div class="panel-section">
+        <h3>Recommended Action</h3>
+        <p>${STATUS_DESC[tech.status] || ''}</p>
+      </div>`;
+    panel.classList.add('open');
+  }
+
+  // ── Events ────────────────────────────────────────────────────────────────────
+  function canvasPos(e) {
+    const rect = canvas.getBoundingClientRect();
+    return {
+      x: (e.clientX - rect.left)  * (canvas.width  / rect.width),
+      y: (e.clientY - rect.top)   * (canvas.height / rect.height),
+    };
+  }
+
+  function hitTest(pos) {
+    return TECHNOLOGIES.find(
+      t => t._x !== undefined && isVisible(t) &&
+           Math.hypot(t._x - pos.x, t._y - pos.y) < HIT_R
+    );
+  }
+
+  canvas.addEventListener('mousemove', e => {
+    const hit = hitTest(canvasPos(e));
+    if (hit) {
+      tooltip.textContent  = hit.name;
+      tooltip.style.left   = (e.clientX + 14) + 'px';
+      tooltip.style.top    = (e.clientY - 10) + 'px';
+      tooltip.classList.add('visible');
+      canvas.style.cursor  = 'pointer';
+    } else {
+      tooltip.classList.remove('visible');
+      canvas.style.cursor  = 'default';
+    }
+  });
+
+  canvas.addEventListener('mouseleave', () => tooltip.classList.remove('visible'));
+  canvas.addEventListener('click', e => { const h = hitTest(canvasPos(e)); if (h) openPanel(h); });
+
+  // ── Filters ───────────────────────────────────────────────────────────────────
+  document.querySelectorAll('.filter-btn[data-filter]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const f = btn.dataset.filter;
+      const v = btn.dataset.value;
+      if (f === 'new') {
+        filters.isNew = !filters.isNew;
+        btn.classList.toggle('active', filters.isNew);
+      } else {
+        filters[f] = v;
+        document.querySelectorAll(`.filter-btn[data-filter="${f}"]`).forEach(b =>
+          b.classList.remove('active', 'active-adopt', 'active-explore', 'active-watch')
+        );
+        btn.classList.add('active');
+        if (f === 'status' && v !== 'all') btn.classList.add('active-' + v.toLowerCase());
+      }
+      draw();
+    });
+  });
+
+  panelClose.addEventListener('click', () => panel.classList.remove('open'));
+
+  // ── Resize ────────────────────────────────────────────────────────────────────
+  function resize() {
+    const wrap  = canvas.parentElement;
+    const avail = Math.min(wrap.clientWidth - 16, wrap.clientHeight - 56, 760);
+    canvas.style.width  = avail + 'px';
+    canvas.style.height = avail + 'px';
+  }
+  window.addEventListener('resize', resize);
+  resize();
+
+  // ── Boot ──────────────────────────────────────────────────────────────────────
+  assignNodePositions();
+  draw();
+
+})();
+</script>
+</body>
+</html>
