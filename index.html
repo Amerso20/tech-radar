@@ -52,6 +52,55 @@
     .filter-btn.active-explore { background: var(--explore); border-color: var(--explore); color: #fff; }
     .filter-btn.active-watch   { background: var(--watch);   border-color: var(--watch);   color: #fff; }
     .filter-divider { width: 1px; height: 24px; background: var(--border); margin: 0 4px; }
+    .search-input { padding: 4px 10px; border-radius: 20px; border: 1.5px solid var(--border);
+      background: var(--surface); font-size: 0.78rem; color: var(--text); outline: none;
+      width: 190px; transition: border-color .15s; font-family: inherit; }
+    .search-input:focus { border-color: var(--purple-light); }
+    .search-input::placeholder { color: var(--text-muted); }
+    .filter-btn.active-compare { background: #C7162B; border-color: #C7162B; color: #fff; }
+
+    /* ── Compare overlay ─────────────────────────────────── */
+    .compare-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.55);
+      display: flex; align-items: center; justify-content: center; z-index: 1000; }
+    .compare-overlay[hidden] { display: none; }
+    .compare-modal { background: var(--surface); border-radius: 8px; width: min(720px, 96vw);
+      max-height: 88vh; overflow-y: auto; box-shadow: 0 10px 50px rgba(0,0,0,0.35); }
+    .cmp-header { background: var(--purple); color: #fff; padding: 14px 20px;
+      display: flex; align-items: center; justify-content: space-between;
+      border-radius: 8px 8px 0 0; position: sticky; top: 0; z-index: 1; }
+    .cmp-header h2 { font-size: 1rem; font-weight: 700; }
+    .cmp-body { padding: 20px; }
+    .cmp-names { display: grid; grid-template-columns: 1fr auto 1fr; align-items: center;
+      gap: 12px; margin-bottom: 20px; }
+    .cmp-card { padding: 12px 14px; border-radius: 6px; }
+    .cmp-card.cmp-a { background: rgba(199,22,43,0.07); border: 2px solid #C7162B; }
+    .cmp-card.cmp-b { background: rgba(0,112,196,0.07); border: 2px solid #0070C4; }
+    .cmp-marker { font-size: 0.7rem; font-weight: 700; letter-spacing: .08em;
+      text-transform: uppercase; margin-bottom: 4px; }
+    .cmp-card.cmp-a .cmp-marker { color: #C7162B; }
+    .cmp-card.cmp-b .cmp-marker { color: #0070C4; }
+    .cmp-card-name { font-size: 0.95rem; font-weight: 700; margin-bottom: 6px; }
+    .cmp-vs { font-size: 0.95rem; font-weight: 700; color: var(--text-muted); text-align: center; }
+    .cmp-table { width: 100%; border-collapse: collapse; margin-bottom: 20px; font-size: 0.83rem; }
+    .cmp-table th, .cmp-table td { padding: 8px 10px; border-bottom: 1px solid var(--border);
+      text-align: left; vertical-align: top; }
+    .cmp-table thead th { font-size: 0.72rem; font-weight: 700; text-transform: uppercase;
+      letter-spacing: .06em; color: var(--text-muted); }
+    .cmp-table tbody th { width: 26%; font-size: 0.72rem; font-weight: 700;
+      text-transform: uppercase; letter-spacing: .06em; color: var(--text-muted); }
+    .cmp-col-a { color: #C7162B; font-weight: 700; }
+    .cmp-col-b { color: #0070C4; font-weight: 700; }
+    .cmp-descs { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+    .cmp-desc-col h4 { font-size: 0.72rem; font-weight: 700; text-transform: uppercase;
+      letter-spacing: .07em; color: var(--text-muted); margin-bottom: 6px; }
+    .cmp-desc-col p { font-size: 0.84rem; line-height: 1.65; color: var(--text); }
+    .compare-hint { font-size: 0.78rem; color: var(--purple); font-weight: 600;
+      text-align: center; padding: 4px 0; margin-top: -2px; }
+    @media (max-width: 560px) {
+      .cmp-names { grid-template-columns: 1fr; }
+      .cmp-vs { display: none; }
+      .cmp-descs { grid-template-columns: 1fr; }
+    }
 
     /* ── Layout ──────────────────────────────────────── */
     .main { display: flex; height: calc(100vh - 112px); overflow: hidden; }
@@ -147,6 +196,10 @@
   <div class="filter-group">
     <button class="filter-btn" data-filter="new" data-value="toggle">&#9733; New in 2026</button>
   </div>
+  <div class="filter-divider"></div>
+  <input type="search" id="search-input" class="search-input" placeholder="Search technologies…" autocomplete="off" aria-label="Search technologies">
+  <div class="filter-divider"></div>
+  <button id="compare-btn" class="filter-btn" aria-pressed="false">&#10697; Compare</button>
 </div>
 
 <div class="main">
@@ -164,6 +217,7 @@
       </div>
       <div class="legend-item"><div class="legend-dot" style="background:rgba(0,0,0,0.14)"></div>Filtered out</div>
     </div>
+    <div id="compare-hint" class="compare-hint" hidden></div>
   </div>
 
   <aside class="side-panel" id="side-panel" aria-label="Technology details" aria-live="polite">
@@ -187,6 +241,16 @@
 </div>
 
 <div id="tooltip" role="tooltip"></div>
+
+<div id="compare-overlay" class="compare-overlay" hidden role="dialog" aria-modal="true" aria-label="Technology comparison">
+  <div class="compare-modal">
+    <div class="cmp-header">
+      <h2>Comparing Technologies</h2>
+      <button id="compare-close" class="panel-close" aria-label="Close comparison">✕</button>
+    </div>
+    <div id="compare-body" class="cmp-body"></div>
+  </div>
+</div>
 
 <script>
 (function () {
@@ -339,12 +403,19 @@
   };
 
   // ── Filters ─────────────────────────────────────────────────────────────────
-  const filters = { theme: 'all', status: 'all', isNew: false };
+  const filters = { theme: 'all', status: 'all', isNew: false, search: '' };
+  let selectedTech = null;
+  let compareMode  = false;
+  let compareA     = null;
+  let compareB     = null;
+  const CC_A = '#C7162B'; // compare-A red
+  const CC_B = '#0070C4'; // compare-B blue
 
   function isVisible(t) {
     if (filters.theme  !== 'all' && t.quadrant !== filters.theme)  return false;
     if (filters.status !== 'all' && t.status   !== filters.status) return false;
     if (filters.isNew  && !t.isNew) return false;
+    if (filters.search && !t.name.toLowerCase().includes(filters.search.toLowerCase())) return false;
     return true;
   }
 
@@ -569,6 +640,57 @@
         ? drawStarNode(t._x, t._y, t._r + 2.5, color, alpha)
         : drawCircleNode(t._x, t._y, t._r, color, alpha);
     });
+
+    // Selection halo — only in normal (non-compare) mode
+    if (!compareMode && selectedTech && selectedTech._x !== undefined) {
+      const t  = selectedTech;
+      const hr = (t.isNew ? t._r + 2.5 : t._r) + 5;
+      ctx.save();
+      ctx.beginPath();
+      ctx.arc(t._x, t._y, hr, 0, Math.PI * 2);
+      ctx.strokeStyle = 'rgba(255,255,255,0.95)';
+      ctx.lineWidth   = 3.5;
+      ctx.stroke();
+      ctx.beginPath();
+      ctx.arc(t._x, t._y, hr, 0, Math.PI * 2);
+      ctx.strokeStyle = C[t.status.toLowerCase()];
+      ctx.lineWidth   = 2;
+      ctx.stroke();
+      ctx.restore();
+    }
+
+    // Compare halos — A (red) and B (blue) with letter badge
+    [[compareA, 'A', CC_A], [compareB, 'B', CC_B]].forEach(([tech, letter, color]) => {
+      if (!tech || tech._x === undefined) return;
+      const hr = (tech.isNew ? tech._r + 2.5 : tech._r) + 5;
+      ctx.save();
+      ctx.beginPath();
+      ctx.arc(tech._x, tech._y, hr, 0, Math.PI * 2);
+      ctx.strokeStyle = 'rgba(255,255,255,0.95)';
+      ctx.lineWidth   = 3.5;
+      ctx.stroke();
+      ctx.beginPath();
+      ctx.arc(tech._x, tech._y, hr, 0, Math.PI * 2);
+      ctx.strokeStyle = color;
+      ctx.lineWidth   = 2;
+      ctx.stroke();
+      // Letter badge at top-right of halo
+      const bx = tech._x + (hr - 1) * Math.cos(-Math.PI / 4);
+      const by = tech._y + (hr - 1) * Math.sin(-Math.PI / 4);
+      ctx.beginPath();
+      ctx.arc(bx, by, 7, 0, Math.PI * 2);
+      ctx.fillStyle   = color;
+      ctx.fill();
+      ctx.strokeStyle = '#fff';
+      ctx.lineWidth   = 1.5;
+      ctx.stroke();
+      ctx.font         = 'bold 8px Arial, sans-serif';
+      ctx.fillStyle    = '#fff';
+      ctx.textAlign    = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText(letter, bx, by);
+      ctx.restore();
+    });
   }
 
   function draw() {
@@ -580,6 +702,8 @@
 
   // ── Panel ─────────────────────────────────────────────────────────────────────
   function openPanel(tech) {
+    selectedTech = tech;
+    draw();
     panelTitle.textContent = tech.name;
     const sc = tech.status.toLowerCase();
     const newBadge = tech.isNew
@@ -610,6 +734,111 @@
     panel.classList.add('open');
   }
 
+  // ── Compare ───────────────────────────────────────────────────────────────────
+  function updateCompareHint() {
+    const hint = document.getElementById('compare-hint');
+    if (!compareMode) { hint.setAttribute('hidden', ''); return; }
+    hint.removeAttribute('hidden');
+    if      (!compareA) hint.textContent = 'Click a technology to select A';
+    else if (!compareB) hint.textContent = 'Now click another technology to select B';
+    else                hint.textContent = 'Click any technology to swap B — click A or B node to deselect';
+  }
+
+  function showCompare() {
+    if (!compareA || !compareB) return;
+    const body = document.getElementById('compare-body');
+
+    function sBadge(t) {
+      return `<span class="badge badge-${t.status.toLowerCase()}">${t.status}</span>`;
+    }
+    function newTag(t) {
+      return t.isNew ? ' <span class="badge badge-new">&#9733; New</span>' : '';
+    }
+    function highlight(va, vb) {
+      // Wrap in bold if values differ — a quick "at a glance" diff
+      return va === vb
+        ? [`<span>${va}</span>`, `<span>${vb}</span>`]
+        : [`<strong>${va}</strong>`, `<strong>${vb}</strong>`];
+    }
+    const [hiImpactA, hiImpactB]   = highlight(compareA.impact, compareB.impact);
+    const [hiRingA,   hiRingB]     = highlight(compareA.ring,   compareB.ring);
+    const [hiStatusA, hiStatusB]   = highlight(compareA.status, compareB.status);
+
+    body.innerHTML = `
+      <div class="cmp-names">
+        <div class="cmp-card cmp-a">
+          <div class="cmp-marker">A</div>
+          <div class="cmp-card-name">${compareA.name}</div>
+          ${sBadge(compareA)}${newTag(compareA)}
+        </div>
+        <div class="cmp-vs">vs</div>
+        <div class="cmp-card cmp-b">
+          <div class="cmp-marker">B</div>
+          <div class="cmp-card-name">${compareB.name}</div>
+          ${sBadge(compareB)}${newTag(compareB)}
+        </div>
+      </div>
+      <table class="cmp-table">
+        <thead>
+          <tr><th></th><th class="cmp-col-a">A — ${compareA.name}</th><th class="cmp-col-b">B — ${compareB.name}</th></tr>
+        </thead>
+        <tbody>
+          <tr><th>Status</th><td>${hiStatusA}</td><td>${hiStatusB}</td></tr>
+          <tr><th>Impact</th><td>${hiImpactA}</td><td>${hiImpactB}</td></tr>
+          <tr><th>Maturity</th><td>${hiRingA}</td><td>${hiRingB}</td></tr>
+          <tr><th>Theme</th><td>${compareA.quadrant}</td><td>${compareB.quadrant}</td></tr>
+          <tr><th>New 2026</th><td>${compareA.isNew ? '&#9733; Yes' : '—'}</td><td>${compareB.isNew ? '&#9733; Yes' : '—'}</td></tr>
+          <tr><th>Action</th>
+            <td style="font-size:0.8rem;color:var(--text-muted)">${STATUS_DESC[compareA.status] || ''}</td>
+            <td style="font-size:0.8rem;color:var(--text-muted)">${STATUS_DESC[compareB.status] || ''}</td>
+          </tr>
+        </tbody>
+      </table>
+      <div class="cmp-descs">
+        <div class="cmp-desc-col">
+          <h4>Why it matters — A</h4>
+          <p>${compareA.description}</p>
+        </div>
+        <div class="cmp-desc-col">
+          <h4>Why it matters — B</h4>
+          <p>${compareB.description}</p>
+        </div>
+      </div>`;
+
+    document.getElementById('compare-overlay').removeAttribute('hidden');
+  }
+
+  function hideCompare() {
+    document.getElementById('compare-overlay').setAttribute('hidden', '');
+  }
+
+  function exitCompareMode() {
+    compareA = compareB = null;
+    compareMode = false;
+    document.getElementById('compare-btn').classList.remove('active-compare');
+    document.getElementById('compare-btn').setAttribute('aria-pressed', 'false');
+    hideCompare();
+    updateCompareHint();
+    draw();
+  }
+
+  function toggleCompare() {
+    compareMode = !compareMode;
+    const btn = document.getElementById('compare-btn');
+    btn.classList.toggle('active-compare', compareMode);
+    btn.setAttribute('aria-pressed', compareMode);
+    if (compareMode) {
+      // Close normal panel when entering compare mode
+      panel.classList.remove('open');
+      selectedTech = null;
+    } else {
+      compareA = compareB = null;
+      hideCompare();
+    }
+    updateCompareHint();
+    draw();
+  }
+
   // ── Events ────────────────────────────────────────────────────────────────────
   function canvasPos(e) {
     const rect = canvas.getBoundingClientRect();
@@ -633,7 +862,7 @@
       tooltip.style.left   = (e.clientX + 14) + 'px';
       tooltip.style.top    = (e.clientY - 10) + 'px';
       tooltip.classList.add('visible');
-      canvas.style.cursor  = 'pointer';
+      canvas.style.cursor  = compareMode ? 'crosshair' : 'pointer';
     } else {
       tooltip.classList.remove('visible');
       canvas.style.cursor  = 'default';
@@ -641,7 +870,36 @@
   });
 
   canvas.addEventListener('mouseleave', () => tooltip.classList.remove('visible'));
-  canvas.addEventListener('click', e => { const h = hitTest(canvasPos(e)); if (h) openPanel(h); });
+  canvas.addEventListener('click', e => {
+    const h = hitTest(canvasPos(e));
+    if (compareMode) {
+      if (!h) return; // ignore empty-space clicks in compare mode
+      if (h === compareA) {         // deselect A → shift B up
+        compareA = compareB;
+        compareB = null;
+      } else if (h === compareB) {  // deselect B
+        compareB = null;
+      } else if (!compareA) {
+        compareA = h;
+      } else if (!compareB) {
+        compareB = h;
+      } else {                      // both full → rotate: old-B out, new → B
+        compareA = compareB;
+        compareB = h;
+      }
+      draw();
+      updateCompareHint();
+      if (compareA && compareB) showCompare(); else hideCompare();
+      return;
+    }
+    if (h) {
+      openPanel(h);
+    } else {
+      panel.classList.remove('open');
+      selectedTech = null;
+      draw();
+    }
+  });
 
   // ── Filters ───────────────────────────────────────────────────────────────────
   document.querySelectorAll('.filter-btn[data-filter]').forEach(btn => {
@@ -663,7 +921,36 @@
     });
   });
 
-  panelClose.addEventListener('click', () => panel.classList.remove('open'));
+  panelClose.addEventListener('click', () => {
+    panel.classList.remove('open');
+    selectedTech = null;
+    draw();
+  });
+
+  document.getElementById('search-input').addEventListener('input', e => {
+    filters.search = e.target.value.trim();
+    draw();
+  });
+
+  document.getElementById('compare-btn').addEventListener('click', toggleCompare);
+
+  document.getElementById('compare-close').addEventListener('click', exitCompareMode);
+
+  // Clicking the overlay backdrop (outside the modal) exits compare mode
+  document.getElementById('compare-overlay').addEventListener('click', e => {
+    if (e.target === e.currentTarget) exitCompareMode();
+  });
+
+  document.addEventListener('keydown', e => {
+    if (e.key !== 'Escape') return;
+    if (compareMode) {
+      exitCompareMode();
+    } else if (panel.classList.contains('open')) {
+      panel.classList.remove('open');
+      selectedTech = null;
+      draw();
+    }
+  });
 
   // ── Resize ────────────────────────────────────────────────────────────────────
   function resize() {
